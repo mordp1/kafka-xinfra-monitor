@@ -1,0 +1,98 @@
+---
+# JMX Exporter configuration for Kafka Monitor
+# This exposes JMX metrics in Prometheus format
+
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+# Whitelist for Kafka Monitor metrics
+whitelistObjectNames:
+  - "kmf:*"
+  - "kmf.services:*"
+  - "java.lang:*"
+
+# Rules to transform JMX metrics to Prometheus format
+rules:
+  # Kafka Monitor main metrics
+  - pattern: 'kmf<type=(.+)><>(\w+): (\d+)'
+    name: kafka_monitor_$1_$2
+    value: $3
+    type: GAUGE
+
+  # Produce service metrics
+  - pattern: 'kmf.services<type=produce-service, name=(.+)><>(\w+): (.+)'
+    name: kafka_monitor_produce_$2
+    labels:
+      service: "$1"
+    value: $3
+    type: GAUGE
+
+  # Consume service metrics
+  - pattern: 'kmf.services<type=consume-service, name=(.+)><>(\w+): (.+)'
+    name: kafka_monitor_consume_$2
+    labels:
+      service: "$1"
+    value: $3
+    type: GAUGE
+
+  # Commit availability service metrics
+  - pattern: 'kmf.services<type=commit-availability-service, name=(.+)><>(\w+): (.+)'
+    name: kafka_monitor_commit_availability_$2
+    labels:
+      service: "$1"
+    value: $3
+    type: GAUGE
+
+  # Commit latency service metrics
+  - pattern: 'kmf.services<type=commit-latency-service, name=(.+)><>(\w+): (.+)'
+    name: kafka_monitor_commit_latency_$2
+    labels:
+      service: "$1"
+    value: $3
+    type: GAUGE
+
+  # Topic management service metrics
+  - pattern: 'kmf.services<type=topic-management-service, name=(.+)><>(\w+): (.+)'
+    name: kafka_monitor_topic_management_$2
+    labels:
+      service: "$1"
+    value: $3
+    type: GAUGE
+
+  # JVM metrics
+  - pattern: 'java.lang<type=Memory><HeapMemoryUsage>(\w+): (\d+)'
+    name: jvm_memory_heap_$1
+    value: $2
+    type: GAUGE
+
+  - pattern: 'java.lang<type=Memory><NonHeapMemoryUsage>(\w+): (\d+)'
+    name: jvm_memory_nonheap_$1
+    value: $2
+    type: GAUGE
+
+  - pattern: 'java.lang<type=GarbageCollector, name=(.+)><>CollectionCount: (\d+)'
+    name: jvm_gc_collection_count
+    labels:
+      gc: "$1"
+    value: $2
+    type: COUNTER
+
+  - pattern: 'java.lang<type=GarbageCollector, name=(.+)><>CollectionTime: (\d+)'
+    name: jvm_gc_collection_time_ms
+    labels:
+      gc: "$1"
+    value: $2
+    type: COUNTER
+
+  - pattern: 'java.lang<type=Threading><>ThreadCount: (\d+)'
+    name: jvm_threads_current
+    value: $1
+    type: GAUGE
+
+  # Catch-all for other KMF metrics
+  - pattern: 'kmf.services<type=(.+), name=(.+)><>(.+): (.+)'
+    name: kafka_monitor_$1_$3
+    labels:
+      service: "$2"
+    value: $4
+    type: GAUGE

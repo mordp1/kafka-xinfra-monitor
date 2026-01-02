@@ -1,0 +1,48 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  labels:
+    strimzi.io/cluster: kafka-cluster
+  name: kafka-monitor-user
+  namespace: kafka-monitoring
+spec:
+  authentication:
+    type: tls
+  authorization:
+    acls:
+    - host: '*'
+      operations:
+      - All
+      resource:
+        name: kafka-monitor-
+        patternType: prefix
+        type: topic
+    - host: '*'
+      operations:
+      - DescribeConfigs
+      - Describe
+      resource:
+        type: topic
+        name: '*'
+        patternType: literal
+    - host: '*'
+      operations:
+      - All
+      resource:
+        type: cluster
+    - host: '*'
+      operations:
+      - Read
+      resource:
+        name: kafka-test-topic
+        patternType: literal
+        type: topic
+    - host: '*'
+      operations:
+      - All
+      resource:
+        name: kafka-monitor-
+        patternType: prefix
+        type: group
+    type: simple
+

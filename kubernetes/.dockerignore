@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+README*
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# Build artifacts (we'll copy only what's needed)
+target/
+.gradle/
+build/classes/
+build/reports/
+build/test-results/
+build/tmp/
+
+# CI/CD
+.github/
+.travis.yml
+azure-pipelines.yml
+
+# Docker
+docker/
+Dockerfile.old
+
+# Test
+test/
+tests/
+
+# Misc
+*.log
+.DS_Store

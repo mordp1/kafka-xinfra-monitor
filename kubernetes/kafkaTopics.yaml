@@ -1,0 +1,27 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  finalizers:
+  - strimzi.io/topic-operator
+  labels:
+    app.kubernetes.io/component: kafka-monitor
+    strimzi.io/cluster: kafka-cluster
+  name: kafka-monitor-topic
+  namespace: kafka-monitoring
+spec:
+  partitions: 9
+  replicas: 3
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  finalizers:
+  - strimzi.io/topic-operator
+  labels:
+    app.kubernetes.io/component: kafka-monitor
+    strimzi.io/cluster: kafka-cluster
+  name: kafka-monitor-topic-metrics
+  namespace: kafka-monitoring
+spec:
+  partitions: 9
+  replicas: 3 

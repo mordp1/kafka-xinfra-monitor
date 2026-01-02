@@ -72,10 +72,10 @@ public class ProduceMetrics {
     _produceDelay.add(new Percentiles(sizeInBytes, latencyPercentileMaxMs, Percentiles.BucketSizing.CONSTANT,
         new Percentile(new MetricName("produce-delay-ms-99th", XinfraMonitorConstants.METRIC_GROUP_NAME_PRODUCE_SERVICE,
             "The 99th percentile delay in ms for produce request", tags), 99.0), new Percentile(
-        new MetricName("produce-delay-ms-999th", XinfraMonitorConstants.METRIC_GROUP_NAME_PRODUCE_SERVICE,
-            "The 99.9th percentile delay in ms for produce request", tags), 99.9), new Percentile(
-        new MetricName("produce-delay-ms-9999th", XinfraMonitorConstants.METRIC_GROUP_NAME_PRODUCE_SERVICE,
-            "The 99.99th percentile delay in ms for produce request", tags), 99.99)));
+              new MetricName("produce-delay-ms-999th", XinfraMonitorConstants.METRIC_GROUP_NAME_PRODUCE_SERVICE,
+                "The 99.9th percentile delay in ms for produce request", tags), 99.9), new Percentile(
+                  new MetricName("produce-delay-ms-9999th", XinfraMonitorConstants.METRIC_GROUP_NAME_PRODUCE_SERVICE,
+                "The 99.99th percentile delay in ms for produce request", tags), 99.99)));
 
     metrics.addMetric(
         new MetricName("produce-availability-avg", XinfraMonitorConstants.METRIC_GROUP_NAME_PRODUCE_SERVICE,

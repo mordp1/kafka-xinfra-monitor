@@ -50,7 +50,8 @@ public class ConsumeServiceConfig extends AbstractConfig {
   static {
     CONFIG = new ConfigDef().define(ZOOKEEPER_CONNECT_CONFIG,
                                     ConfigDef.Type.STRING,
-                                    ConfigDef.Importance.HIGH,
+                                    "", // Default empty - ZooKeeper not required for modern Kafka
+                                    ConfigDef.Importance.LOW,
                                     ZOOKEEPER_CONNECT_DOC)
                             .define(BOOTSTRAP_SERVERS_CONFIG,
                                     ConfigDef.Type.STRING,

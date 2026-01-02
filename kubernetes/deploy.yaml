@@ -1,0 +1,225 @@
+#apiVersion: v1
+#kind: ConfigMap
+#metadata:
+#  name: kafka-monitor-config
+#  namespace: kafka-monitoring
+#data:
+#   xinfra-monitor.properties: |
+#     # Kafka Monitor Configuration for mTLS connection
+#   
+#     {
+#       "single-cluster-monitor": {
+#         "class.name": "com.linkedin.xinfra.monitor.apps.SingleClusterMonitor",
+#         "topic": "kafka-monitor-topic",
+#         "zookeeper.connect": "",
+#         "bootstrap.servers": "kafka-bootstrap.example.com:443",
+#         "produce.service.props": {
+#           "bootstrap.servers": "kafka-bootstrap.example.com:443",
+#           "security.protocol": "SSL",
+#           "ssl.keystore.location": "/opt/kafka-monitor/certs/user.p12",
+#           "ssl.keystore.password": "${KEYSTORE_PASSWORD}",
+#           "ssl.keystore.type": "PKCS12",
+#           "ssl.key.password": "${KEY_PASSWORD}",
+#           "client.id": "kafka-monitor-producer"
+#         },
+#         "consume.service.props": {
+#           "bootstrap.servers": "kafka-bootstrap.example.com:443",
+#           "security.protocol": "SSL",
+#           "ssl.keystore.location": "/opt/kafka-monitor/certs/user.p12",
+#           "ssl.keystore.password": "${KEYSTORE_PASSWORD}",
+#           "ssl.keystore.type": "PKCS12",
+#           "ssl.key.password": "${KEY_PASSWORD}",
+#           "group.id": "kafka-monitor-consumer",
+#           "client.id": "kafka-monitor-consumer"
+#         },
+#         "produce.record.delay.ms": 100,
+#         "topic-management.topicManagementEnabled": false,
+#         "topic-management.replicationFactor": 3,
+#         "topic-management.partitionsToBrokersRatio": 2.0,
+#         "topic-management.rebalance.interval.ms": 600000,
+#         "topic-management.topicCreationEnabled": false,
+#         "topic-management.topic.props": {
+#           "retention.ms": "3600000"
+#         }
+#       },
+#       "reporter-service": {
+#         "class.name": "com.linkedin.xinfra.monitor.services.DefaultMetricsReporterService",
+#         "report.interval.sec": 1,
+#         "report.metrics.list": [
+#           "kmf.services:type=produce-service,name=*:produce-availability-avg",
+#           "kmf.services:type=consume-service,name=*:consume-availability-avg",
+#           "kmf.services:type=produce-service,name=*:records-produced-total",
+#           "kmf.services:type=consume-service,name=*:records-consumed-total",
+#           "kmf.services:type=consume-service,name=*:records-lost-total",
+#           "kmf.services:type=consume-service,name=*:records-duplicated-total",
+#           "kmf.services:type=consume-service,name=*:records-delay-ms-avg",
+#           "kmf.services:type=produce-service,name=*:records-produced-rate",
+#           "kmf.services:type=produce-service,name=*:produce-error-rate"
+#         ]
+#       },
+#       "jetty-service": {
+#         "class.name": "com.linkedin.xinfra.monitor.services.JettyService",
+#         "jetty.port": 8778
+#       },
+#       "jolokia-service": {
+#         "class.name": "com.linkedin.xinfra.monitor.services.JolokiaService"
+#       }
+#     }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-monitor
+  labels:
+    app: kafka-monitor
+    cluster: kafka-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-monitor
+  template:
+    metadata:
+      labels:
+        app: kafka-monitor
+        cluster: kafka-cluster
+        app.kubernetes.io/component: kafka-monitor
+        app.kubernetes.io/owner: kafka-team
+      annotations:
+        sidecar.istio.io/inject: "false"
+        prometheus.io/scrape: "true"
+    spec:
+      serviceAccountName: kafka-monitor
+      containers:
+      - name: kafka-monitor
+        image: ghcr.io/your-org/kafka-monitor:1.2  # Replace with your image
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8778
+          name: jolokia
+          protocol: TCP
+        - containerPort: 9090
+          name: jmx-metrics
+          protocol: TCP
+        env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka-bootstrap.example.com:443"
+        - name: KAFKA_TOPIC
+          value: "kafka-monitor-topic"
+        - name: KAFKA_SECURITY_PROTOCOL
+          value: "SSL"
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: "/opt/kafka-monitor/certs/user.p12"
+        - name: ENABLE_JMX_EXPORTER
+          value: "true"
+        - name: KAFKA_CLIENT_ID
+          value: "kafka-monitor"
+        - name: KAFKA_CONSUMER_GROUP_ID
+          value: "kafka-monitor-consumer"
+        - name: TOPIC_CREATION_ENABLED
+          value: "false"
+        - name: CONFIG_FILE
+          value: "/opt/kafka-monitor/config/xinfra-monitor.properties"
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kafka-monitor-user
+              key: user.password
+        - name: KAFKA_SSL_KEY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kafka-monitor-user
+              key: user.password
+        - name: JAVA_OPTS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC -javaagent:/opt/jmx_prometheus_javaagent.jar=9090:/opt/kafka-monitor/config/jmx-exporter-config.yaml"
+        volumeMounts:
+        - name: kafka-user-certs
+          mountPath: /opt/kafka-monitor/certs/user.p12
+          subPath: user.p12
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /jolokia/read/kmf:type=kafka-monitor:offline-runnable-count
+            port: 8778
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /jolokia/read/kmf:type=kafka-monitor:offline-runnable-count
+            port: 8778
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: kafka-user-certs
+        secret:
+          secretName: kafka-monitor-user
+          items:
+          - key: user.p12
+            path: user.p12
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-monitor
+  namespace: kafka-monitoring
+  labels:
+    app: kafka-monitor
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    app: kafka-monitor
+  ports:
+  - name: jolokia
+    port: 8778
+    targetPort: 8778
+    protocol: TCP
+  - name: jmx-metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kafka-monitor
+  namespace: kafka-monitoring
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kafka-monitor
+  namespace: kafka-monitoring
+  labels:
+    app: kafka-monitor
+    component: application    
+spec:
+  selector:
+    matchLabels:
+      app: kafka-monitor
+  namespaceSelector:
+    matchNames:
+      - kafka-monitoring
+  podMetricsEndpoints:
+  - port: jmx-metrics
+    interval: 30s
+    path: /metrics
+    scheme: http

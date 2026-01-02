@@ -1,201 +1,279 @@
-<p align="center">
-  <img src="/docs/images/xinfra_monitor.png" width="510"/>
-</p>
+# Kafka Monitor
 
-# Xinfra Monitor
-[![Build Status](https://travis-ci.org/linkedin/kafka-monitor.svg?branch=master)](https://travis-ci.org/linkedin/kafka-monitor)
-![Greetings](https://github.com/linkedin/kafka-monitor/workflows/Greetings/badge.svg)
-![Mark stale issues and pull requests](https://github.com/linkedin/kafka-monitor/workflows/Mark%20stale%20issues%20and%20pull%20requests/badge.svg)
-![Pull Request Labeler](https://github.com/linkedin/kafka-monitor/workflows/Pull%20Request%20Labeler/badge.svg)
+Docker and Kubernetes deployment configurations for Kafka Monitor ([Xinfra Monitor](https://github.com/linkedin/kafka-monitor))
 
-Xinfra Monitor (formerly Kafka Monitor) is a framework to implement and execute long-running kafka
-system tests in a real cluster. It complements Kafka’s existing system
-tests by capturing potential bugs or regressions that are only likely to occur
-after prolonged period of time or with low probability. Moreover, it allows you to monitor Kafka
-cluster using end-to-end pipelines to obtain a number of derived vital stats
-such as
+## About This Fork
 
-<ol>
- <li> 
-  End-to-end latency
- </li>
-  <li> 
-  Service availability
-</li>
-  <li> 
-  Produce and Consume availability
-    </li>
-  <li> 
-  Consumer offset commit availability
-    </li>
-  <li> 
-  Consumer offset commit latency
-    </li>
-  <li> 
-  Kafka message loss rate
-    </li>
-  <li> 
-  And many, many more.
-  </li>
-  </ol>
-  
-You can easily
-deploy Xinfra Monitor to test and monitor your Kafka cluster without requiring
-any change to your application.
+This is an updated version of Kafka Monitor (Xinfra Monitor) focused on:
 
-Xinfra Monitor can automatically create the monitor topic with the specified config
-and increase partition count of the monitor topic to ensure partition# >=
-broker#. It can also reassign partition and trigger preferred leader election
-to ensure that each broker acts as leader of at least one partition of the
-monitor topic. This allows Xinfra Monitor to detect performance issue on every
-broker without requiring users to manually manage the partition assignment of
-the monitor topic.
+- **JDK 21 compatibility** - Updated to run on OpenJDK 21
+- **Modern Kafka support** - Compatible with recent Kafka versions that run without ZooKeeper (KRaft mode)
+- **Container-ready** - Docker and Kubernetes deployment configurations included
 
-Xinfra Monitor is used in conjunction with different middle-layer services such as li-apache-kafka-clients in order to monitor single clusters, pipeline desination clusters, and other types of clusters as done in Linkedin engineering for real-time cluster healthchecks.
+> **Note**: This project is a work in progress. The primary goal is to provide JDK 21 and ZooKeeper-free Kafka compatibility. Additional code cleanup and improvements are welcome contributions!
 
-These are some of the metrics emitted from a Xinfra Monitor instance.
+**Contributions are welcome!** Feel free to help improve the codebase, add features, or fix issues.
 
-```
-kmf:type=kafka-monitor:offline-runnable-count
-kmf.services:type=produce-service,name=*:produce-availability-avg
-kmf.services:type=consume-service,name=*:consume-availability-avg
-kmf.services:type=produce-service,name=*:records-produced-total
-kmf.services:type=consume-service,name=*:records-consumed-total
-kmf.services:type=produce-service,name=*:records-produced-rate
-kmf.services:type=produce-service,name=*:produce-error-rate
-kmf.services:type=consume-service,name=*:consume-error-rate
-kmf.services:type=consume-service,name=*:records-lost-total
-kmf.services:type=consume-service,name=*:records-lost-rate
-kmf.services:type=consume-service,name=*:records-duplicated-total
-kmf.services:type=consume-service,name=*:records-delay-ms-avg
-kmf.services:type=commit-availability-service,name=*:offsets-committed-avg
-kmf.services:type=commit-availability-service,name=*:offsets-committed-total
-kmf.services:type=commit-availability-service,name=*:failed-commit-offsets-avg
-kmf.services:type=commit-availability-service,name=*:failed-commit-offsets-total
-kmf.services:type=commit-latency-service,name=*:commit-offset-latency-ms-avg
-kmf.services:type=commit-latency-service,name=*:commit-offset-latency-ms-max
-kmf.services:type=commit-latency-service,name=*:commit-offset-latency-ms-99th
-kmf.services:type=commit-latency-service,name=*:commit-offset-latency-ms-999th
-kmf.services:type=commit-latency-service,name=*:commit-offset-latency-ms-9999th
+> **Tested with**: OpenJDK 21.0.8 (2025-07-15)
+
+
+## Quick Start - Local Development
+
+### 1. Build the Application
+
+```bash
+# From project root
+./gradlew clean build -x test
 ```
 
-## Getting Started
+### 2. Build Docker Image
 
-### Prerequisites
-Xinfra Monitor requires Gradle 2.0 or higher. Java 7 should be used for
-building in order to support both Java 7 and Java 8 at runtime.
-
-Xinfra Monitor supports Apache Kafka 0.8 to 2.0:
-- Use branch 0.8.2.2 to work with Apache Kafka 0.8
-- Use branch 0.9.0.1 to work with Apache Kafka 0.9
-- Use branch 0.10.2.1 to work with Apache Kafka 0.10
-- Use branch 0.11.x to work with Apache Kafka 0.11
-- Use branch 1.0.x to work with Apache Kafka 1.0
-- Use branch 1.1.x to work with Apache Kafka 1.1
-- Use master branch to work with Apache Kafka 2.0
-
-
-### Configuration Tips
-
-<ol>
-<li> We advise advanced users to run Xinfra Monitor with
-<code>./bin/xinfra-monitor-start.sh config/xinfra-monitor.properties</code>. The default
-xinfra-monitor.properties in the repo provides an simple example of how to
-monitor a single cluster. You probably need to change the value of
-<code>zookeeper.connect</code> and <code>bootstrap.servers</code> to point to your cluster.
-  </li>
-  <br />
-<li> The full list of configs and their documentation can be found in the code of
-Config class for respective service, e.g. ProduceServiceConfig.java and
-ConsumeServiceConfig.java.</li>
-<br />
-<li> You can specify multiple SingleClusterMonitor in the xinfra-monitor.properties to
-monitor multiple Kafka clusters in one Xinfra Monitor process. As another
-advanced use-case, you can point ProduceService and ConsumeService to two different Kafka clusters that are connected by MirrorMaker to monitor their end-to-end latency.</li>
-<br />  
-<li> Xinfra Monitor by default will automatically create the monitor topic based on
-the e.g.  <code>topic-management.replicationFactor</code> and <code>topic-management.partitionsToBrokersRatio</code>
-specified in the config. replicationFactor is 1 by default and you probably
-want to change it to the same replication factor as used for your existing
-topics. You can disable auto topic creation by setting <code>produce.topic.topicCreationEnabled</code> to false.
-</li>
-<br />
-<li> Xinfra Monitor can automatically increase partition count of the monitor topic
-to ensure partition# >= broker#. It can also reassign partition and trigger
-preferred leader election to ensure that each broker acts as leader of at least
-one partition of the monitor topic. To use this feature, use either
-EndToEndTest or TopicManagementService in the properties file. </li>
-<br />
-  <li> When using <code>Secure Sockets Layer</code> (SSL) or any non-plaintext security protocol for AdminClient, please configure the following entries in the <code>single-cluster-monitor</code> props, <code>produce.producer.props</code>, as well as <code>consume.consumer.props</code>. https://docs.confluent.io/current/installation/configuration/admin-configs.html 
-<ol>
-  <li> ssl.key.password	</li>
-  <li> ssl.keystore.location</li>
-  <li> ssl.keystore.password </li>
-  <li> ssl.truststore.location</li>
-  <li> ssl.truststore.password</li>
-</ol>
-</ol>
-
-
-### Build Xinfra Monitor
-```
-$ git clone https://github.com/linkedin/kafka-monitor.git
-$ cd kafka-monitor 
-$ ./gradlew jar
+```bash
+docker buildx build --platform linux/amd64 -t kafka-monitor:1.2 .
 ```
 
-### Start XinfraMonitor to run tests/services specified in the config file
-```
-$ ./bin/xinfra-monitor-start.sh config/xinfra-monitor.properties
-```
+2.1 Push image
 
-### Run Xinfra Monitor with arbitrary producer/consumer configuration (e.g. SASL enabled client)
-Edit `config/xinfra-monitor.properties` to specify custom configurations for producer in the key/value map `produce.producer.props` in
-`config/xinfra-monitor.properties`. Similarly specify configurations for
-consumer as well. The documentation for producer and consumer in the key/value maps can be found in the Apache Kafka wiki.
 
-```
-$ ./bin/xinfra-monitor-start.sh config/xinfra-monitor.properties
-```
+### 3. Run with Docker Compose
 
-### Run SingleClusterMonitor app to monitor kafka cluster
+```bash
+# Start services
+docker-compose up -d
 
-Metrics `produce-availability-avg` and `consume-availability-avg` demonstrate
-whether messages can be properly produced to and consumed from this cluster.
-See Service Overview wiki for how these metrics are derived.
+# View logs
+docker-compose logs -f kafka-monitor
 
-```
-$ ./bin/single-cluster-monitor.sh --topic test --broker-list localhost:9092 --zookeeper localhost:2181
+# Stop services
+docker-compose down
 ```
 
-### Run MultiClusterMonitor app to monitor a pipeline of Kafka clusters connected by MirrorMaker
-Edit `config/multi-cluster-monitor.properties` to specify the right broker and
-zookeeper url as suggested by the comment in the properties file
+## Docker Compose Configuration
 
-Metrics `produce-availability-avg` and `consume-availability-avg` demonstrate
-whether messages can be properly produced to the source cluster and consumed
-from the destination cluster. See config/multi-cluster-monitor.properties for
-the full jmx path for these metrics.
+### Basic Setup (PLAINTEXT)
 
-```
-$ ./bin/xinfra-monitor-start.sh config/multi-cluster-monitor.properties
-```
+Edit `docker-compose.yml`:
 
-### Run checkstyle on the java code
-```
-./gradlew checkstyleMain checkstyleTest
+```yaml
+services:
+  kafka-monitor:
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "localhost:9092"
+      KAFKA_TOPIC: "xinfra-monitor-topic"
+      KAFKA_SECURITY_PROTOCOL: "PLAINTEXT"
 ```
 
-### Build IDE project
-```
-./gradlew idea
-./gradlew eclipse
+## Running Without Docker
+
+### Direct Execution
+
+```bash
+# Edit configuration
+vim kubernetes/xinfra-monitor.properties
+
+# Start monitor
+bin/xinfra-monitor-start.sh kubernetes/xinfra-monitor.properties
 ```
 
-## Wiki
+### Configuration Example (mTLS)
 
-- [Motivation](https://github.com/linkedin/kafka-monitor/wiki/Motivation)
-- [Design Overview](https://github.com/linkedin/kafka-monitor/wiki/Design-Overview)
-- [Service and App Overview](https://github.com/linkedin/kafka-monitor/wiki)
-- [Future Work](https://github.com/linkedin/kafka-monitor/wiki/Future-Work)
-- [Application Configuration](https://github.com/linkedin/kafka-monitor/wiki/App-Configuration)
+```json
+{
+  "single-cluster-monitor": {
+    "bootstrap.servers": "broker:9093",
+    "security.protocol": "SSL",
+    "ssl.keystore.location": "/path/to/user.p12",
+    "ssl.keystore.password": "PASSWORD",
+    "ssl.key.password": "PASSWORD"
+  }
+}
+```
+
+## Kubernetes Deployment Example
+
+### 1. Create Kafka Resources
+
+```bash
+# Create KafkaUser (generates certificates)
+kubectl apply -f kubernetes/kafkaUser-example.yaml -n kafka-monitoring
+
+# Create KafkaTopics
+kubectl apply -f kubernetes/kafkaTopics.yaml -n kafka-monitoring
+
+# Wait for secrets to be generated
+kubectl get secret kafka-monitor-user -n kafka-monitoring
+```
+
+### 2. Deploy Kafka Monitor
+
+```bash
+# Apply deployment
+kubectl apply -f kubernetes/deploy.yaml -n kafka-monitoring
+
+# Check pod status
+kubectl get pods -n kafka-monitoring -l app=kafka-monitor
+
+# View logs
+kubectl logs -n kafka-monitoring -l app=kafka-monitor -f
+```
+
+### 3. Access Metrics
+
+```bash
+# Port forward
+kubectl port-forward -n kafka-monitoring svc/kafka-monitor 8778:8778 9090:9090
+
+# Jolokia metrics
+curl http://localhost:8778/jolokia/list
+
+# Prometheus metrics
+curl http://localhost:9090/metrics | grep kafka_monitor
+```
+
+## Available Endpoints
+
+### Jolokia (Port 8778)
+
+```bash
+# Health check
+curl http://localhost:8778/jolokia/version
+```
+
+### Prometheus Metrics (Port 9090)
+
+```bash
+# All metrics
+curl http://localhost:9090/metrics
+```
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Kafka broker list |
+| `KAFKA_TOPIC` | `xinfra-monitor-topic` | Monitoring topic name |
+| `KAFKA_SECURITY_PROTOCOL` | `PLAINTEXT` | Protocol: PLAINTEXT, SSL, SASL_SSL |
+| `KAFKA_CLIENT_ID` | `xinfra-monitor` | Client identifier |
+| `KAFKA_CONSUMER_GROUP_ID` | `xinfra-monitor` | Consumer group |
+| `KAFKA_SSL_KEYSTORE_LOCATION` | - | Path to keystore (mTLS) |
+| `KAFKA_SSL_KEYSTORE_PASSWORD` | - | Keystore password |
+| `KAFKA_SSL_KEY_PASSWORD` | - | Key password |
+| `ENABLE_JMX_EXPORTER` | `true` | Enable Prometheus exporter |
+| `PROMETHEUS_EXPORTER_PORT` | `9090` | Prometheus metrics port |
+| `TOPIC_CREATION_ENABLED` | `false` | Auto-create topic |
+
+
+# Quick Start Guide - Local Kubernetes Testing ( Using Kind)
+
+This is a quick reference guide for setting up and testing Kafka Xinfra Monitor with Strimzi on a local Kubernetes cluster.
+
+## Prerequisites
+
+```bash
+# Install kind (Kubernetes in Docker)
+brew install kind  # macOS
+# or visit https://kind.sigs.k8s.io/docs/user/quick-start/
+
+# Verify installations
+kind version
+kubectl version --client
+docker --version
+```
+
+## One-Command Setup
+
+Run everything in one go:
+
+```bash
+./setup-all.sh
+```
+
+This will:
+1. Create a local Kubernetes cluster (kind)
+2. Build the Kafka Monitor Docker image
+3. Install Strimzi Operator
+4. Deploy a Kafka cluster
+5. Deploy Kafka Monitor
+6. Run tests
+
+
+## Access Metrics
+
+Port-forward the service:
+
+```bash
+kubectl port-forward -n kafka-monitor svc/kafka-monitor 8778:8778 9090:9090
+```
+
+Then access:
+- **Jolokia**: http://localhost:8778/jolokia/
+- **Prometheus metrics**: http://localhost:9090/metrics
+
+## View Logs
+
+```bash
+# Monitor logs
+kubectl logs -f deployment/kafka-monitor -n kafka-monitor
+
+# Kafka logs
+kubectl logs -f -n kafka -l strimzi.io/name=my-cluster-kafka
+```
+
+## Useful Commands
+
+```bash
+# Check all resources
+kubectl get all -n kafka
+kubectl get all -n kafka-monitor
+
+# Check Kafka cluster status
+kubectl get kafka -n kafka
+
+# Check topics
+kubectl get kafkatopic -n kafka
+
+# Describe pod for troubleshooting
+kubectl describe pod -n kafka-monitor -l app=kafka-monitor
+```
+
+## Cleanup
+
+Remove everything:
+
+```bash
+./local-k8s/cleanup.sh
+```
+
+Or manually:
+
+```bash
+kind delete cluster --name kafka-test
+docker stop kind-registry
+docker rm kind-registry
+```
+
+## Troubleshooting
+
+### Cluster not starting
+- Ensure Docker has enough resources (4GB RAM minimum recommended)
+- Check: `docker ps` and `docker stats`
+
+### Image build fails
+- Ensure Gradle build succeeds: `./gradlew clean build -x test`
+- Check Java version (JDK 21 recommended)
+
+### Kafka pods not ready
+- Wait longer (Kafka can take 2-5 minutes to start)
+- Check: `kubectl describe pod -n kafka <pod-name>`
+- Check events: `kubectl get events -n kafka --sort-by='.lastTimestamp'`
+
+### Monitor not connecting
+- Verify Kafka is ready: `kubectl get kafka -n kafka`
+- Check monitor logs: `kubectl logs -f deployment/kafka-monitor -n kafka-monitor`
+- Verify service name: `kubectl get svc -n kafka | grep bootstrap`
+
+## Configuration
+
+Key configuration files:
+- `local-k8s/kafka-cluster.yaml` - Kafka cluster configuration
+- `local-k8s/kafka-monitor-deployment.yaml` - Monitor deployment configuration

@@ -81,7 +81,8 @@ public class TopicManagementServiceConfig extends AbstractConfig {
               TOPIC_MANAGEMENT_ENABLED_DOC)
       .define(ZOOKEEPER_CONNECT_CONFIG,
               ConfigDef.Type.STRING,
-              ConfigDef.Importance.HIGH,
+              "", // Default empty - ZooKeeper not required for modern Kafka
+              ConfigDef.Importance.LOW,
               ZOOKEEPER_CONNECT_DOC)
       .define(TOPIC_CONFIG,
               ConfigDef.Type.STRING,
